@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
 import kotlin.math.max
+import kotlin.math.min
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -338,17 +340,17 @@ fun LayoutSelectionScreen(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
                             val sheetAspect = if (config.orientation == PageOrientation.PORTRAIT) 595f / 842f else 842f / 595f
                             Box(
                                 modifier = Modifier
-                                    .height(190.dp)
+                                    .height(165.dp)
                                     .aspectRatio(sheetAspect)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(Color.White)
                                     .border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                                    .padding(8.dp)
+                                    .padding(6.dp)
                             ) {
                                 CustomSheetLivePreview(
                                     cols = config.columns,
@@ -358,7 +360,7 @@ fun LayoutSelectionScreen(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Fits ${config.columns * config.rows} slides centered per sheet",
                                 fontSize = 11.sp,
@@ -370,7 +372,7 @@ fun LayoutSelectionScreen(
             }
         }
 
-        // Bottom Action Bar
+        // Bottom Action Bar (Compact & Sleek)
         Surface(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -381,30 +383,30 @@ fun LayoutSelectionScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 OutlinedButton(
                     onClick = onBackClick,
-                    modifier = Modifier.height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.height(42.dp),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Back")
+                    Text("Back", fontSize = 13.sp)
                 }
 
                 Button(
                     onClick = onNextClick,
                     modifier = Modifier
-                        .height(48.dp)
+                        .height(42.dp)
                         .testTag("next_print_mode_button"),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
@@ -412,13 +414,14 @@ fun LayoutSelectionScreen(
                 ) {
                     Text(
                         text = "Next: Print Mode",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                        fontSize = 13.sp
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -448,16 +451,16 @@ private fun OrientationButton(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 8.dp),
+                .padding(vertical = 8.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = label,
                 fontSize = 11.sp,
@@ -480,27 +483,27 @@ private fun StepperControl(
     Column(modifier = modifier) {
         Text(
             text = title,
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold)
         )
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(4.dp)
+                .padding(horizontal = 4.dp, vertical = 2.dp)
         ) {
             IconButton(
                 onClick = { if (value > minValue) onValueChange(value - 1) },
                 enabled = value > minValue,
-                modifier = Modifier.size(34.dp)
+                modifier = Modifier.size(28.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Remove,
                     contentDescription = "Decrease",
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(15.dp)
                 )
             }
 
@@ -513,12 +516,12 @@ private fun StepperControl(
             IconButton(
                 onClick = { if (value < maxValue) onValueChange(value + 1) },
                 enabled = value < maxValue,
-                modifier = Modifier.size(34.dp)
+                modifier = Modifier.size(28.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Increase",
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(15.dp)
                 )
             }
         }
@@ -541,18 +544,19 @@ fun CustomSheetLivePreview(
         val printableW = sheetW - pad * 2
         val printableH = sheetH - pad * 2
 
-        val slideFill = Color(0xFF15803D) // Solid emerald green
-        val slideBorder = Color(0xFF0F172A)
+        val spaceX = 4f
+        val spaceY = 4f
 
-        val spaceX = 3f
-        val spaceY = 3.5f
+        // Reserve space for "Slide X" caption under each slide when hasNumbers is enabled
+        val numberCaptionH = if (hasNumbers) max(10f, sheetH * 0.06f) else 0f
 
         val maxCellW = (printableW - (spaceX * (cols - 1))) / cols
         val maxCellH = (printableH - (spaceY * (rows - 1))) / rows
+        val availSlideH = maxCellH - numberCaptionH
         val slideAspect = 16f / 9f
 
-        val (fitW, fitH) = if (maxCellW / maxCellH > slideAspect) {
-            val h = maxCellH
+        val (fitW, fitH) = if (maxCellW / availSlideH > slideAspect) {
+            val h = availSlideH
             val w = h * slideAspect
             Pair(w, h)
         } else {
@@ -561,8 +565,9 @@ fun CustomSheetLivePreview(
             Pair(w, h)
         }
 
+        val cellTotalH = fitH + numberCaptionH
         val totalGridW = cols * fitW + (cols - 1) * spaceX
-        val totalGridH = rows * fitH + (rows - 1) * spaceY
+        val totalGridH = rows * cellTotalH + (rows - 1) * spaceY
 
         // Symmetrically center the entire grid of slides horizontally & vertically
         val startX = pad + (printableW - totalGridW) / 2f
@@ -571,49 +576,71 @@ fun CustomSheetLivePreview(
         for (r in 0 until rows) {
             for (c in 0 until cols) {
                 val x = startX + c * (fitW + spaceX)
-                val y = startY + r * (fitH + spaceY)
+                val y = startY + r * (cellTotalH + spaceY)
 
-                // Draw slide card
+                // Draw slide card body
                 drawRoundRect(
-                    color = slideFill,
+                    color = Color(0xFF15803D), // Solid emerald green
                     topLeft = Offset(x, y),
                     size = Size(fitW, fitH),
-                    cornerRadius = CornerRadius(2f, 2f)
+                    cornerRadius = CornerRadius(2.5f, 2.5f)
                 )
 
                 // Miniature slide title bar
-                val titleH = max(1f, fitH * 0.16f)
-                val titleW = fitW * 0.55f
+                val titleH = max(1.5f, fitH * 0.16f)
+                val titleW = fitW * 0.58f
                 drawRoundRect(
-                    color = Color.White.copy(alpha = 0.9f),
+                    color = Color.White.copy(alpha = 0.92f),
                     topLeft = Offset(x + fitW * 0.08f, y + fitH * 0.14f),
                     size = Size(titleW, titleH),
-                    cornerRadius = CornerRadius(0.5f, 0.5f)
+                    cornerRadius = CornerRadius(0.8f, 0.8f)
                 )
 
                 // Miniature slide body lines
-                val lineH = max(0.8f, fitH * 0.09f)
+                val lineH = max(1f, fitH * 0.09f)
                 drawRoundRect(
-                    color = Color.White.copy(alpha = 0.65f),
+                    color = Color.White.copy(alpha = 0.72f),
                     topLeft = Offset(x + fitW * 0.08f, y + fitH * 0.42f),
                     size = Size(fitW * 0.82f, lineH),
                     cornerRadius = CornerRadius(0.5f, 0.5f)
                 )
                 drawRoundRect(
-                    color = Color.White.copy(alpha = 0.65f),
+                    color = Color.White.copy(alpha = 0.72f),
                     topLeft = Offset(x + fitW * 0.08f, y + fitH * 0.62f),
                     size = Size(fitW * 0.64f, lineH),
                     cornerRadius = CornerRadius(0.5f, 0.5f)
                 )
 
-                // Slide border
+                // 1. Prominent Slide Framing Borders (clearly visible when toggled)
                 if (hasBorders) {
                     drawRoundRect(
-                        color = slideBorder,
+                        color = Color(0xFF0F172A), // Crisp deep black outline border
                         topLeft = Offset(x, y),
                         size = Size(fitW, fitH),
-                        cornerRadius = CornerRadius(2f, 2f),
-                        style = Stroke(0.8f)
+                        cornerRadius = CornerRadius(2.5f, 2.5f),
+                        style = Stroke(width = max(1.6f, fitW * 0.026f))
+                    )
+                }
+
+                // 2. Prominent Slide Numbers (clearly visible when toggled)
+                if (hasNumbers) {
+                    val slideIndex = r * cols + c + 1
+                    val numText = "Slide $slideIndex"
+                    val textSizePx = max(6.5f, min(12f, fitH * 0.20f))
+
+                    val textPaint = android.graphics.Paint().apply {
+                        color = android.graphics.Color.argb(235, 15, 23, 42)
+                        textSize = textSizePx
+                        textAlign = android.graphics.Paint.Align.CENTER
+                        isAntiAlias = true
+                        isFakeBoldText = true
+                    }
+
+                    drawContext.canvas.nativeCanvas.drawText(
+                        numText,
+                        x + fitW / 2f,
+                        y + fitH + textSizePx + 1.5f,
+                        textPaint
                     )
                 }
             }

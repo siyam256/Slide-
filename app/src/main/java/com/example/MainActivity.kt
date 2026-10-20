@@ -25,12 +25,15 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.AppStep
+import com.example.ui.components.SettingsDialog
 import com.example.ui.components.SlidePrintTopBar
 import com.example.ui.screens.ColorModeScreen
 import com.example.ui.screens.ExportPreviewScreen
@@ -73,6 +76,7 @@ fun SlidePrintApp(viewModel: SlidePrintViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var showSettingsDialog by remember { mutableStateOf(false) }
 
     // Activity Result Launcher to pick PDF file
     val openDocumentLauncher = rememberLauncherForActivityResult(
@@ -158,6 +162,9 @@ fun SlidePrintApp(viewModel: SlidePrintViewModel) {
                     if (step.ordinal < uiState.currentStep.ordinal) {
                         viewModel.goToStep(step)
                     }
+                },
+                onSettingsClick = {
+                    showSettingsDialog = true
                 }
             )
         },
@@ -271,5 +278,9 @@ fun SlidePrintApp(viewModel: SlidePrintViewModel) {
                 }
             }
         }
+    }
+
+    if (showSettingsDialog) {
+        SettingsDialog(onDismiss = { showSettingsDialog = false })
     }
 }

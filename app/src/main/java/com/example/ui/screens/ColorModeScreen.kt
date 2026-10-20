@@ -305,32 +305,32 @@ fun ColorModeScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     OutlinedButton(
                         onClick = onBackClick,
                         enabled = !isGenerating,
-                        modifier = Modifier.height(48.dp),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.height(42.dp),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Back")
+                        Text("Back", fontSize = 13.sp)
                     }
 
                     Button(
                         onClick = onGenerateClick,
                         enabled = !isGenerating,
                         modifier = Modifier
-                            .height(48.dp)
+                            .height(42.dp)
                             .testTag("generate_nup_pdf_button"),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
@@ -339,21 +339,22 @@ fun ColorModeScreen(
                         if (isGenerating) {
                             CircularProgressIndicator(
                                 color = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Generating...")
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Generating...", fontSize = 13.sp)
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Print,
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = "Generate Handout PDF",
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                fontSize = 13.sp
                             )
                         }
                     }

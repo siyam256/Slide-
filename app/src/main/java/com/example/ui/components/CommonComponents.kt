@@ -39,12 +39,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.AppStep
 
+import androidx.compose.material.icons.filled.Settings
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SlidePrintTopBar(
     currentStep: AppStep,
     onBackClick: (() -> Unit)? = null,
-    onStepClick: ((AppStep) -> Unit)? = null
+    onStepClick: ((AppStep) -> Unit)? = null,
+    onSettingsClick: (() -> Unit)? = null
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -80,6 +83,20 @@ fun SlidePrintTopBar(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Go back",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                },
+                actions = {
+                    if (onSettingsClick != null) {
+                        IconButton(
+                            onClick = onSettingsClick,
+                            modifier = Modifier.testTag("top_bar_settings_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
