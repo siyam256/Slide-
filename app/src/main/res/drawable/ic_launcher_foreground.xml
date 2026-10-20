@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Launcher Foreground Layer.
+    References @drawable/app_logo.
+    To change the app logo manually, replace app/src/main/res/drawable/app_logo.png (or app_logo.xml)!
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="66dp"
+        android:height="66dp"
+        android:drawable="@drawable/app_logo"
+        android:gravity="center" />
+</layer-list>

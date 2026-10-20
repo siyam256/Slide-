@@ -1,0 +1,6 @@
+{
+  "name": "SlidePrint - N-Up PDF & Slide Print",
+  "description": "N-up slide and PDF layout generator with multi-page preview, smart layout presets, custom grids, ink-saving Magic Print, and instant sharing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

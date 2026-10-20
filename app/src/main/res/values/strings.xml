@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">SlidePrint</string>
+    <string name="title_choose_pdf">Choose Slides PDF</string>
+    <string name="desc_choose_pdf">Select a slide presentation or PDF to format into N-up printable handouts</string>
+    <string name="btn_browse_pdf">Browse Files</string>
+    <string name="btn_sample_pdf">Try Sample Slides</string>
+    <string name="step_select_pages">Select Pages</string>
+    <string name="step_layout">Choose Layout</string>
+    <string name="step_color_mode">Print Mode</string>
+    <string name="step_preview_export">Export &amp; Print</string>
+</resources>
