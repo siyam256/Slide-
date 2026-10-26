@@ -1,6 +1,21 @@
 package com.example.model
 
 import android.graphics.Bitmap
+import android.net.Uri
+import java.io.File
+
+/**
+ * Represents a user-selected input document (PDF or converted image) in the file staging screen.
+ */
+data class SelectedDocument(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val name: String,
+    val uri: Uri? = null,
+    val file: File,
+    val isPdf: Boolean = true,
+    val pageCount: Int = 1,
+    val thumbnail: Bitmap? = null
+)
 
 /**
  * Represents an individual slide from the imported PDF.
@@ -134,6 +149,7 @@ data class LayoutConfig(
  */
 enum class AppStep(val title: String) {
     SOURCE("Choose PDF"),
+    FILES("Select PDFs"),
     PAGES("Select Pages"),
     LAYOUT("Layout & Grid"),
     COLOR("Print Mode"),

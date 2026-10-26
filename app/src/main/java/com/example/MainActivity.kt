@@ -37,6 +37,7 @@ import com.example.ui.components.SettingsDialog
 import com.example.ui.components.SlidePrintTopBar
 import com.example.ui.screens.ColorModeScreen
 import com.example.ui.screens.ExportPreviewScreen
+import com.example.ui.screens.FileSelectionScreen
 import com.example.ui.screens.LayoutSelectionScreen
 import com.example.ui.screens.PageSelectionScreen
 import com.example.ui.screens.SourceSelectionScreen
@@ -78,21 +79,21 @@ fun SlidePrintApp(viewModel: SlidePrintViewModel) {
     val scope = rememberCoroutineScope()
     var showSettingsDialog by remember { mutableStateOf(false) }
 
-    // Activity Result Launcher to pick PDF file
-    val openDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            viewModel.loadPdfFromUri(uri)
+    // Activity Result Launcher to pick initial files (PDF or Images)
+    val openDocumentsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            viewModel.loadInitialFiles(uris)
         }
     }
 
-    // Activity Result Launcher to append / merge additional PDF files
-    val appendDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            viewModel.appendPdfFromUri(uri)
+    // Activity Result Launcher to append / merge additional files (PDF or Images)
+    val addMoreDocumentsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            viewModel.addMoreFiles(uris)
         }
     }
 
@@ -128,7 +129,8 @@ fun SlidePrintApp(viewModel: SlidePrintViewModel) {
             AppStep.EXPORT -> viewModel.resetToStart()
             AppStep.COLOR -> viewModel.goToStep(AppStep.LAYOUT)
             AppStep.LAYOUT -> viewModel.goToStep(AppStep.PAGES)
-            AppStep.PAGES -> viewModel.goToStep(AppStep.SOURCE)
+            AppStep.PAGES -> viewModel.goToStep(AppStep.FILES)
+            AppStep.FILES -> viewModel.goToStep(AppStep.SOURCE)
             AppStep.SOURCE -> {
                 viewModel.cleanupCache()
                 (context as? ComponentActivity)?.finish()
@@ -154,7 +156,8 @@ fun SlidePrintApp(viewModel: SlidePrintViewModel) {
                         AppStep.EXPORT -> viewModel.resetToStart()
                         AppStep.COLOR -> viewModel.goToStep(AppStep.LAYOUT)
                         AppStep.LAYOUT -> viewModel.goToStep(AppStep.PAGES)
-                        AppStep.PAGES -> viewModel.resetToStart()
+                        AppStep.PAGES -> viewModel.goToStep(AppStep.FILES)
+                        AppStep.FILES -> viewModel.goToStep(AppStep.SOURCE)
                         AppStep.SOURCE -> {}
                     }
                 },
@@ -192,7 +195,24 @@ fun SlidePrintApp(viewModel: SlidePrintViewModel) {
                         isLoading = uiState.isLoading,
                         loadingMessage = uiState.loadingMessage,
                         onBrowseClick = {
-                            openDocumentLauncher.launch(arrayOf("application/pdf"))
+                            openDocumentsLauncher.launch(arrayOf("application/pdf", "image/*"))
+                        }
+                    )
+                }
+
+                AppStep.FILES -> {
+                    FileSelectionScreen(
+                        documents = uiState.selectedDocuments,
+                        isLoading = uiState.isLoading,
+                        loadingMessage = uiState.loadingMessage,
+                        onAddFilesClick = {
+                            addMoreDocumentsLauncher.launch(arrayOf("application/pdf", "image/*"))
+                        },
+                        onRemoveDocument = { id ->
+                            viewModel.removeSelectedDocument(id)
+                        },
+                        onNextClick = {
+                            viewModel.proceedFromFilesToPages()
                         }
                     )
                 }
@@ -207,7 +227,7 @@ fun SlidePrintApp(viewModel: SlidePrintViewModel) {
                         onSelectAll = { viewModel.selectAllSlides() },
                         onClearAll = { viewModel.clearAllSlides() },
                         onAddMorePdfsClick = {
-                            appendDocumentLauncher.launch(arrayOf("application/pdf"))
+                            addMoreDocumentsLauncher.launch(arrayOf("application/pdf", "image/*"))
                         },
                         onNextClick = { viewModel.goToStep(AppStep.LAYOUT) }
                     )

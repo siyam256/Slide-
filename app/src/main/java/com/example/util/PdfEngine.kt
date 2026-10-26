@@ -1,6 +1,7 @@
 package com.example.util
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -605,6 +606,120 @@ object PdfEngine {
         }
         doc.close()
         outputFile
+    }
+
+    /**
+     * Converts an image file (JPG, PNG, WebP) into a single-page PDF document.
+     */
+    suspend fun imageToPdf(context: Context, imageFile: File): File = withContext(Dispatchers.IO) {
+        val outputFile = File(context.cacheDir, "img_${System.currentTimeMillis()}_${imageFile.nameWithoutExtension}.pdf")
+
+        // First read dimensions safely
+        val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(imageFile.absolutePath, boundsOptions)
+
+        val origWidth = if (boundsOptions.outWidth > 0) boundsOptions.outWidth else 1280
+        val origHeight = if (boundsOptions.outHeight > 0) boundsOptions.outHeight else 720
+
+        // Subsample if image is extremely high resolution to prevent OOM
+        var inSampleSize = 1
+        val maxDim = 2560
+        val maxActual = max(origWidth, origHeight)
+        while (maxActual / inSampleSize > maxDim) {
+            inSampleSize *= 2
+        }
+
+        val decodeOptions = BitmapFactory.Options().apply {
+            this.inSampleSize = inSampleSize
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath, decodeOptions)
+            ?: throw IllegalArgumentException("Could not decode image file")
+
+        val doc = PdfDocument()
+        val pageInfo = PdfDocument.PageInfo.Builder(bitmap.width, bitmap.height, 1).create()
+        val page = doc.startPage(pageInfo)
+        page.canvas.drawColor(Color.WHITE)
+        page.canvas.drawBitmap(bitmap, 0f, 0f, null)
+        doc.finishPage(page)
+
+        FileOutputStream(outputFile).use { out ->
+            doc.writeTo(out)
+        }
+        doc.close()
+        bitmap.recycle()
+        outputFile
+    }
+
+    /**
+     * Merges multiple PDF files into a single combined PDF document in cache.
+     */
+    suspend fun mergeMultiplePdfs(context: Context, files: List<File>): File = withContext(Dispatchers.IO) {
+        val validFiles = files.filter { it.exists() }
+        if (validFiles.size == 1) {
+            return@withContext validFiles[0]
+        }
+        val outputFile = File(context.cacheDir, "merged_all_${System.currentTimeMillis()}.pdf")
+        val doc = PdfDocument()
+        var targetPageNumber = 1
+
+        for (file in validFiles) {
+            try {
+                val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                val renderer = PdfRenderer(pfd)
+                for (pageIdx in 0 until renderer.pageCount) {
+                    val page = renderer.openPage(pageIdx)
+                    val width = page.width
+                    val height = page.height
+                    val pageInfo = PdfDocument.PageInfo.Builder(width, height, targetPageNumber++).create()
+                    val docPage = doc.startPage(pageInfo)
+                    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    val canvas = Canvas(bitmap)
+                    canvas.drawColor(Color.WHITE)
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                    docPage.canvas.drawBitmap(bitmap, 0f, 0f, null)
+                    doc.finishPage(docPage)
+                    page.close()
+                    bitmap.recycle()
+                }
+                renderer.close()
+                pfd.close()
+            } catch (_: Exception) {}
+        }
+
+        FileOutputStream(outputFile).use { out ->
+            doc.writeTo(out)
+        }
+        doc.close()
+        outputFile
+    }
+
+    /**
+     * Reads page count and extracts the first page thumbnail from a PDF file.
+     */
+    suspend fun getPdfPageCountAndThumbnail(file: File): Pair<Int, Bitmap?> = withContext(Dispatchers.IO) {
+        try {
+            val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+            val renderer = PdfRenderer(pfd)
+            val count = renderer.pageCount
+            var thumb: Bitmap? = null
+            if (count > 0) {
+                val page = renderer.openPage(0)
+                val targetW = 480
+                val targetH = (targetW * (page.height.toFloat() / page.width.toFloat())).toInt().coerceIn(240, 640)
+                val bitmap = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bitmap)
+                canvas.drawColor(Color.WHITE)
+                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                page.close()
+                thumb = bitmap
+            }
+            renderer.close()
+            pfd.close()
+            Pair(count, thumb)
+        } catch (_: Exception) {
+            Pair(1, null)
+        }
     }
 
     /**

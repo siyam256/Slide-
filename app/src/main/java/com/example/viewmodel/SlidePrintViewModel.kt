@@ -12,13 +12,16 @@ import com.example.model.ColorPrintMode
 import com.example.model.LayoutConfig
 import com.example.model.PageLayoutPreset
 import com.example.model.PageOrientation
+import com.example.model.SelectedDocument
 import com.example.model.SlideItem
 import com.example.util.PdfEngine
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
@@ -26,6 +29,7 @@ data class SlidePrintUiState(
     val currentStep: AppStep = AppStep.SOURCE,
     val isLoading: Boolean = false,
     val loadingMessage: String = "",
+    val selectedDocuments: List<SelectedDocument> = emptyList(),
     val pdfFile: File? = null,
     val pdfFileName: String = "",
     val pdfFileSize: String = "",
@@ -50,83 +54,152 @@ class SlidePrintViewModel(application: Application) : AndroidViewModel(applicati
 
 
 
-    fun loadPdfFromUri(uri: Uri) {
+    private suspend fun convertUriToDocument(context: Context, uri: Uri): SelectedDocument? = withContext(Dispatchers.IO) {
+        try {
+            val contentResolver = context.contentResolver
+            var displayName = "Document.pdf"
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val nameIdx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (cursor.moveToFirst() && nameIdx != -1) {
+                    displayName = cursor.getString(nameIdx) ?: displayName
+                }
+            }
+            val mimeType = contentResolver.getType(uri)?.lowercase() ?: ""
+            val isImage = mimeType.startsWith("image/") ||
+                    displayName.endsWith(".jpg", ignoreCase = true) ||
+                    displayName.endsWith(".jpeg", ignoreCase = true) ||
+                    displayName.endsWith(".png", ignoreCase = true) ||
+                    displayName.endsWith(".webp", ignoreCase = true)
+
+            if (isImage) {
+                val tempImg = File(context.cacheDir, "temp_img_${System.currentTimeMillis()}_${displayName}")
+                contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(tempImg).use { out -> input.copyTo(out) }
+                }
+                val convertedPdf = PdfEngine.imageToPdf(context, tempImg)
+                val thumbPair = PdfEngine.getPdfPageCountAndThumbnail(convertedPdf)
+                try { tempImg.delete() } catch (_: Exception) {}
+                SelectedDocument(
+                    name = displayName,
+                    uri = uri,
+                    file = convertedPdf,
+                    isPdf = false,
+                    pageCount = 1,
+                    thumbnail = thumbPair.second
+                )
+            } else {
+                val tempPdf = File(context.cacheDir, "imported_${System.currentTimeMillis()}_${displayName}")
+                contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(tempPdf).use { out -> input.copyTo(out) }
+                }
+                val (pageCount, thumb) = PdfEngine.getPdfPageCountAndThumbnail(tempPdf)
+                SelectedDocument(
+                    name = displayName,
+                    uri = uri,
+                    file = tempPdf,
+                    isPdf = true,
+                    pageCount = pageCount,
+                    thumbnail = thumb
+                )
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun loadInitialFiles(uris: List<Uri>) {
+        if (uris.isEmpty()) return
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, loadingMessage = "Reading PDF file...", errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, loadingMessage = "Importing files...", errorMessage = null) }
             try {
                 val context = getApplication<Application>()
-                // Clean up previous session cache files
                 PdfEngine.clearAppCache(context)
-
-                val contentResolver = context.contentResolver
-
-                // Extract filename and size
-                var fileName = "Document.pdf"
-                var fileSizeStr = ""
-                contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
-                    if (cursor.moveToFirst()) {
-                        if (nameIndex != -1) fileName = cursor.getString(nameIndex) ?: fileName
-                        if (sizeIndex != -1) {
-                            val sizeBytes = cursor.getLong(sizeIndex)
-                            fileSizeStr = formatFileSize(sizeBytes)
-                        }
-                    }
+                val docs = mutableListOf<SelectedDocument>()
+                for (uri in uris) {
+                    val doc = convertUriToDocument(context, uri)
+                    if (doc != null) docs.add(doc)
                 }
-
-                // Copy to cache file
-                val tempFile = File(context.cacheDir, "imported_${System.currentTimeMillis()}.pdf")
-                contentResolver.openInputStream(uri)?.use { input ->
-                    FileOutputStream(tempFile).use { output ->
-                        input.copyTo(output)
-                    }
+                if (docs.isEmpty()) {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "Could not load selected file(s).") }
+                    return@launch
                 }
-
-                processLoadedPdf(tempFile, fileName, fileSizeStr)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        loadingMessage = "",
+                        selectedDocuments = docs,
+                        currentStep = AppStep.FILES,
+                        errorMessage = null
+                    )
+                }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Could not open PDF: ${e.message}") }
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Error reading files: ${e.message}") }
             }
         }
     }
 
-    fun appendPdfFromUri(uri: Uri) {
+    fun addMoreFiles(uris: List<Uri>) {
+        if (uris.isEmpty()) return
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, loadingMessage = "Merging additional PDF...", errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, loadingMessage = "Adding file(s)...", errorMessage = null) }
             try {
                 val context = getApplication<Application>()
-                val contentResolver = context.contentResolver
-
-                var addedName = "Additional.pdf"
-                contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (cursor.moveToFirst() && nameIndex != -1) {
-                        addedName = cursor.getString(nameIndex) ?: addedName
-                    }
+                val newDocs = mutableListOf<SelectedDocument>()
+                for (uri in uris) {
+                    val doc = convertUriToDocument(context, uri)
+                    if (doc != null) newDocs.add(doc)
                 }
-
-                val newTempFile = File(context.cacheDir, "imported_add_${System.currentTimeMillis()}.pdf")
-                contentResolver.openInputStream(uri)?.use { input ->
-                    FileOutputStream(newTempFile).use { output ->
-                        input.copyTo(output)
-                    }
+                _uiState.update { state ->
+                    state.copy(
+                        isLoading = false,
+                        loadingMessage = "",
+                        selectedDocuments = state.selectedDocuments + newDocs,
+                        errorMessage = null
+                    )
                 }
-
-                val currentFile = _uiState.value.pdfFile
-                if (currentFile == null || !currentFile.exists()) {
-                    processLoadedPdf(newTempFile, addedName, "")
-                    return@launch
-                }
-
-                val combinedFile = PdfEngine.mergePdfs(context, currentFile, newTempFile)
-                val combinedName = "${_uiState.value.pdfFileName} + $addedName"
-                val combinedSize = formatFileSize(combinedFile.length())
-
-                processLoadedPdf(combinedFile, combinedName, combinedSize)
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Could not add PDF: ${e.message}") }
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Error adding files: ${e.message}") }
             }
         }
+    }
+
+    fun removeSelectedDocument(id: String) {
+        _uiState.update { state ->
+            val updated = state.selectedDocuments.filterNot { it.id == id }
+            state.copy(selectedDocuments = updated)
+        }
+    }
+
+    fun proceedFromFilesToPages() {
+        val docs = _uiState.value.selectedDocuments
+        if (docs.isEmpty()) {
+            _uiState.update { it.copy(errorMessage = "Please select at least 1 PDF or Image file.") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, loadingMessage = "Combining files & preparing slides...", errorMessage = null) }
+            try {
+                val context = getApplication<Application>()
+                val mergedFile = if (docs.size == 1) {
+                    docs[0].file
+                } else {
+                    PdfEngine.mergeMultiplePdfs(context, docs.map { it.file })
+                }
+                val combinedName = if (docs.size == 1) docs[0].name else "${docs[0].name} + ${docs.size - 1} more"
+                val combinedSize = formatFileSize(mergedFile.length())
+                processLoadedPdf(mergedFile, combinedName, combinedSize)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Failed to process files: ${e.message}") }
+            }
+        }
+    }
+
+    fun loadPdfFromUri(uri: Uri) {
+        loadInitialFiles(listOf(uri))
+    }
+
+    fun appendPdfFromUri(uri: Uri) {
+        addMoreFiles(listOf(uri))
     }
 
     private suspend fun processLoadedPdf(file: File, fileName: String, fileSize: String) {
